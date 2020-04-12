@@ -25,7 +25,8 @@ msgErrorMoving db 10,13,"Error moving pointer...$",10,13,'$'
 space db 10,13,'$' 
 
 ;countOfReadBites dw 96h     ;150 bytes 
-countOfReadBites dw 33h  
+;countOfReadBites dw 33h 
+countOfReadBites dw 3Eh 
 
 maxWordSize equ 50
 cmdBufSize db 52 dup(0)
@@ -40,14 +41,14 @@ count_bufSize dw 0000h
 
 delem db " .,!",09H,0Dh,0Ah
 
-chgWord db 50 dup ('$') 
+chgWord db 54 dup ('$') 
 wordSize dw 0
-newWord db 50 dup ('$')                       
+newWord db 54 dup ('$')                       
 new_wordSize dw 0 
 ;chgWord db "robot"
 ;wordSize dw 5
-;newWord db "1111"                       
-;new_wordSize dw 4
+;newWord db "111"                       
+;new_wordSize dw 3
 
 processed_bytes_l dw 0000h 
 processed_bytes_h dw 0000h 
@@ -73,20 +74,7 @@ get_word macro inp_str
     lea dx, inp_str
     int 21h
     popa
-endm
-
-check_fseek macro proc_bytes_l,proc_bytes_h
-    pusha
-    mov ax,proc_bytes_h
-    cmp ax,max_processed_bytes
-    jb @@end_check_fseek
-    add proc_bytes_l
-    mov ax,max_processed_bytes
-    sub proc_bytes_h,ax 
-@@end_check_fseek:    
-    popa
-    ret 
-endm    
+endm  
 
 
 start:
@@ -125,6 +113,7 @@ start:
     mov file_id, ax             ;get file id from ax  
     call get_size_of_file
     call create_new_file
+;============MAIN CYCLE=============    
 next_part:
     
     cmp file_size,0000h
@@ -145,7 +134,7 @@ next_part:
     
     cmp file_size,0000h
     jne next_part
-     
+;===================================     
 close_and_exit: 
     call close_file 
     
@@ -160,6 +149,7 @@ exit:
 ;////////////////////////////////////////////////////////////
 ;===================PROC===================================== 
 
+;FOR GETTING CMD ARGUMENTS
 cmd_parse proc
     pusha
     cld
@@ -201,6 +191,7 @@ error_cmd:
     
 cmd_parse endp 
 
+;GETTING WORD FROM CMD LINE
 get_cmd_word proc
     push ax
     push cx
@@ -236,6 +227,7 @@ end_getting:
     ret
 get_cmd_word endp
 
+;FOR WORKING PROGRAM WE NEED TO KNOW SIZE OF WORDS
 get_cmd_wordSize proc                     
 	push bx                     
 	push si                   
@@ -256,7 +248,8 @@ get_cmd_wordSize proc
 	pop bx                     
 	ret                         
 get_cmd_wordSize endp                          
-    
+
+;OPENING FILE    
 open_file proc
     push dx
     mov dx,offset file_name 
@@ -276,7 +269,7 @@ is_opened:
     ret
 open_file endp   
 
- 
+;READING 
 read_file proc 
     push bx
     push cx
@@ -316,6 +309,7 @@ end_reading_file:
     ret
 read_file endp
 
+;MOVING POINTER IN FILE
 move_pointer_by_processed_bytes proc 
     pusha
       
@@ -341,6 +335,7 @@ normal_:
     ret
 move_pointer_by_processed_bytes endp
 
+;CLOSING
 close_file proc
     pusha
     mov bx, file_id 
@@ -352,6 +347,7 @@ close_file proc
     ret
 close_file endp  
 
+;IF THERE ARE IF THE END OF THE BUFFER DOESN'T MAKE A WORD
 make_normal_file_buffer proc
     pusha
     lea si,file_buffer
@@ -373,7 +369,8 @@ its_normal:
     popa
     ret
 make_normal_file_buffer endp    
-
+ 
+;GETTING SIZE OF FILE
 get_size_of_file proc
     pusha    
     xor cx,cx
@@ -387,7 +384,7 @@ get_size_of_file proc
     ret
 get_size_of_file endp 
    
-
+;SEARCH FOR CHGWORD IF BUFFER
 check_buf proc
     pusha
     lea si,file_buffer
@@ -453,6 +450,7 @@ all_is_clear:
     ret
 check_buf endp
 
+;GETTING INFO IF CHANGE SIZE OF BUFFER
 get_output_bufSize proc
     pusha
     lea si,file_buffer
@@ -473,7 +471,8 @@ end_check_counting:
     popa
     ret
 get_output_bufSize endp    
-        
+
+;MOVSB CHGWORD AND NEW WORD        
 change_word proc
     ;lea di,newWord+2
     mov si,startPosBuf
@@ -552,7 +551,6 @@ xchg_word_to_pos:
     xchg si,di     
     ;/////////////////////////
     jmp word_is_changed
-to_right:
         
 enter_in_buf:
     ;add si,2
@@ -567,6 +565,7 @@ word_is_changed:
     ret
 change_word endp  
 
+;CREATING NEW RESULTING FILE
 create_new_file proc
     pusha
         mov ah, 3Ch
@@ -579,6 +578,7 @@ create_new_file proc
     ret
 create_new_file endp 
 
+;OPENIGN NEW FILE
 open_new_file proc
     pusha
     mov dx,offset new_file_name 
@@ -588,6 +588,7 @@ open_new_file proc
     ret
 open_new_file endp 
 
+;GETTING INFO ABOUT CHANGES IN SIZE OF BUFFER
 get_buf_lenght proc
     pusha
     mov ax,new_bufSize
@@ -598,6 +599,7 @@ get_buf_lenght proc
     ret
 get_buf_lenght endp 
 
+;GETTING LAST POSITION IN BUFFER
 get_end_pos_buf proc
     pusha
     mov ax,startPosBuf
@@ -607,6 +609,7 @@ get_end_pos_buf proc
     ret
 get_end_pos_buf endp    
 
+;WRITING RESULT IN NEW FILE
 write_into_new_file proc
     pusha 
     
@@ -648,6 +651,7 @@ end_writing:
     ret
 write_into_new_file endp
 
+;WHEN BIFFER WAS WRITING IN NEW FILE, MAKE IT CLEAR
 init_buffer_to_start_pos proc
     pusha
     lea si,file_buffer
